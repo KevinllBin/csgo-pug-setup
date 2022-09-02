@@ -25,7 +25,7 @@ Also see the [AlliedModders thread](https://forums.alliedmods.net/showthread.php
 - [WarMod](https://forums.alliedmods.net/showthread.php?t=225474) (does pretty much everything, but generally intended for matches, more complex)
 
 
-##dependencies
+## dependencies
 - [csgo-ff-damage-sm](https://github.com/Ilusion9/csgo-ff-damage-sm) (control damage)
 -idead from BoneTM (https://github.com/BoneTM/csgo-pug-setup)
 ## Download

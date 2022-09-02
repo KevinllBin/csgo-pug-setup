@@ -2,6 +2,7 @@
 #include <cstrike>
 #include <sdktools>
 #include <sourcemod>
+#include <csgo_colors>
 
 #include "include/logdebug.inc"
 #include "include/pugsetup.inc"
@@ -206,8 +207,8 @@ Handle g_hOnWarmupCfg = INVALID_HANDLE;
 
 // clang-format off
 public Plugin myinfo = {
-    name = "CS:GO PugSetup",
-    author = "splewis",
+    name = "PUGSETUP-FFVoteVersion",
+    author = "splewis Everaday8modify",
     description = "Tools for setting up pugs/10mans",
     version = PLUGIN_VERSION,
     url = "https://github.com/splewis/csgo-pug-setup"
@@ -287,7 +288,7 @@ public void OnPluginStart() {
                    "Maximum size of a team when selecting team sizes.", _, true, 2.0);
   g_MessagePrefixCvar = CreateConVar(
       "sm_pugsetup_message_prefix", "[{YELLOW}PugSetup{NORMAL}]",
-      "The tag applied before plugin messages. If you want no tag, you can set an empty string here. Note that beginning the string with a color will not render that color - you can workaround with a space or another character first.");
+      "The tag applied before plugin messages. If you want no tag, you can set an empty string here.");
   g_MutualUnpauseCvar = CreateConVar(
       "sm_pugsetup_mutual_unpausing", "1",
       "Whether an unpause command requires someone from both teams to fully unpause the match. Note that this forces the pause/unpause commands to be unrestricted (so anyone can use them).");
@@ -1722,18 +1723,85 @@ public void PrintSetupInfo(int client) {
     PugSetup_Message(client, "%t: {GREEN}%s", "PlayoutOption", buffer);
   }
 }
+public int TeamHitMenuHandler(Menu menu, MenuAction action, int clientOrResult, int selection)
+{
+	switch(action)
+	{
+		case MenuAction_Select:
+		{
+      int client = clientOrResult;
+      char info[5];
+      menu.GetItem(selection, info, sizeof(info));
+      if (StrEqual(info, "on"))
+      {
+        PugSetup_MessageToAll("%T", "FriendlyFireVoteOn", LANG_SERVER, client);
+      }
+      else if(StrEqual(info, "off"))
+      {
+        PugSetup_MessageToAll("%T", "FriendlyFireVoteOff", LANG_SERVER, client);
+      }
+		}
+		case MenuAction_VoteEnd:
+		{
+      int result = clientOrResult;
+      char info[5];
+      menu.GetItem(result, info, sizeof(info));
+      if (StrEqual(info, "on"))
+      {
+        PugSetup_MessageToAll("%T", "FriendlyFireEndOn", LANG_SERVER);
+        ServerCommand("mp_friendlyfire 1;");
+        ServerCommand("sm_ff_damage_reduction_hegrenade 1.0");
+        ServerCommand("sm_ff_damage_reduction_hegrenade_self 1.0");    
+        ServerCommand("sm_ff_damage_reduction_molotov 1.0");
+        ServerCommand("sm_ff_damage_reduction_molotov_self 1.0");
+        ServerCommand("sm_ff_damage_reduction_knife 1.0");
+        ServerCommand("sm_ff_damage_reduction_taser 1.0");
+        ServerCommand("sm_ff_damage_reduction_other 1.0");
+        ServerCommand("ff_damage_reduction_bullets  0.3");
+        CGOPrintToChatAll("{RED}友伤已{GREEN}开启{RED}所有武器均会对队友造成伤害");
+      }
+      else if(StrEqual(info, "off"))
+      {
+        PugSetup_MessageToAll("%T", "FriendlyFireEndOff", LANG_SERVER);
+        ServerCommand("mp_friendlyfire 1");
+        ServerCommand("sm_ff_damage_reduction_hegrenade_self 1.0");    
+        ServerCommand("sm_ff_damage_reduction_molotov 1.0");
+        ServerCommand("sm_ff_damage_reduction_molotov_self 1.0");
+        ServerCommand("sm_ff_damage_reduction_knife 0");
+        ServerCommand("sm_ff_damage_reduction_taser 0");
+        ServerCommand("sm_ff_damage_reduction_other 0");
+        ServerCommand("ff_damage_reduction_bullets  0");
+        CGOPrintToChatAll("{RED}友伤已{GREEN}关闭{LIGHTRED}请注意:手雷燃烧瓶依旧会对队友造成伤害!");
+      }
+
+      if (g_AutoLive) {
+        CreateCountDown();
+      } else {
+        ChangeState(GameState_WaitingForStart);
+        CreateTimer(float(START_COMMAND_HINT_TIME), Timer_StartCommandHint);
+        GiveStartCommandHint();
+      }
+     
+		}
+		case MenuAction_End:
+		{
+			CloseHandle(menu);
+		}
+	}
+
+	return 0;
+}
 
 public void ReadyToStart() {
   Call_StartForward(g_hOnReadyToStart);
   Call_Finish();
 
-  if (g_AutoLive) {
-    CreateCountDown();
-  } else {
-    ChangeState(GameState_WaitingForStart);
-    CreateTimer(float(START_COMMAND_HINT_TIME), Timer_StartCommandHint);
-    GiveStartCommandHint();
-  }
+  Menu teamHitMenu = new Menu(TeamHitMenuHandler);
+  teamHitMenu.SetTitle("是否开启队伤");
+  teamHitMenu.AddItem("off", "关闭");
+  teamHitMenu.AddItem("on", "开启");
+  teamHitMenu.ExitButton = false;
+  teamHitMenu.DisplayVoteToAll(10);
 }
 
 static void GiveStartCommandHint() {
